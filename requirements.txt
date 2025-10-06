@@ -1,0 +1,21 @@
+# MindEase AI Service - Python Dependencies
+
+# Web Framework
+flask==3.0.0
+flask-cors==4.0.0
+
+# Machine Learning & NLP
+transformers==4.35.2
+torch
+sentencepiece==0.1.99
+
+# Utilities
+numpy==1.24.3
+python-dotenv==1.0.0
+
+# Optional: For better performance
+# accelerate==0.24.1  # For faster model loading
+# optimum==1.14.0     # For model optimization
+
+# Development
+requests==2.31.0
