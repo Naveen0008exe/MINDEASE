@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind Ease - Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* slate-900 */
+        }
+        #chat-messages::-webkit-scrollbar, #community-feed::-webkit-scrollbar, #insights-content::-webkit-scrollbar { width: 6px; }
+        #chat-messages::-webkit-scrollbar-track, #community-feed::-webkit-scrollbar-track, #insights-content::-webkit-scrollbar-track { background: #1e293b; /* slate-800 */ }
+        #chat-messages::-webkit-scrollbar-thumb, #community-feed::-webkit-scrollbar-thumb, #insights-content::-webkit-scrollbar-thumb { background: #c026d3; /* fuchsia-600 */ border-radius: 3px; }
+        ::placeholder { color: #64748b; /* slate-500 */ }
+        
+        @keyframes breathe {
+            0% { transform: scale(0.8); opacity: 0.7; }
+            50% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.7; }
+        }
+        .breathing-circle { animation: breathe 8s ease-in-out infinite; }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .typing-dot { animation: bounce 1.2s infinite ease-in-out; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        /* Memory Game Styles */
+        .memory-card {
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        .memory-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .memory-card.is-flipped .memory-card-inner {
+            transform: rotateY(180deg);
+        }
+        .memory-card-front, .memory-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+        }
+        .memory-card-front {
+            background-color: #a855f7; /* purple-500 */
+        }
+        .memory-card-back {
+            background-color: #6d28d9; /* violet-700 */
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 antialiased overflow-hidden">
+    
+    <!-- Side Panel -->
+    <aside id="side-panel" class="fixed top-0 left-0 z-40 w-64 h-screen bg-slate-800/95 backdrop-blur-sm border-r border-slate-700 transform -translate-x-full transition-transform duration-300 ease-in-out">
+        <div class="p-4">
+            <h2 class="text-2xl font-bold text-fuchsia-400 mb-6">Menu</h2>
+            <nav class="space-y-2">
+                <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors nav-link" data-view="chat">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6M6 20v-4M18 20v-2"/></svg>
+                    <span>Dopamine Dojo</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors nav-link" data-view="insights">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v1.2a1 1 0 0 0 1 1h.3a1 1 0 0 0 1-1.2V4a3 3 0 0 1 3-3h0"/><path d="M18.5 2.5a2.5 2.5 0 0 1 0 5h-10a2.5 2.5 0 0 1 0-5h10Z"/><path d="M9.5 14.5A2.5 2.5 0 0 0 12 12v-1.2a1 1 0 0 1 1-1h.3a1 1 0 0 1 1 1.2V12a3 3 0 0 0 3 3h0"/><path d="M18.5 21.5a2.5 2.5 0 0 0 0-5h-10a2.5 2.5 0 0 0 0 5h10Z"/><path d="M4.5 12a2.5 2.5 0 0 0 0 5h.3a1 1 0 0 0 1-1.2V14a1 1 0 0 0-1-1h-.3Z"/><path d="M4.5 5a2.5 2.5 0 0 1 0 5h.3a1 1 0 0 1 1-1.2V7a1 1 0 0 1-1-1h-.3Z"/></svg>
+                    <span>My Insights</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors nav-link" data-view="garden">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><path d="M12 7v1c0 .5.5 1 1 1h1"/></svg>
+                    <span>My Garden</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors nav-link" data-view="community">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span>Community</span>
+                </a>
+                 <div>
+                    <button id="reflect-toggle" class="w-full flex items-center justify-between gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 12.5c0-2.5-1.4-5-4-6.5s-6-2.5-9.5-2.5-7 1-9.5 2.5-4 4-4 6.5 1.4 5 4 6.5 6 2.5 9.5 2.5 7-1 9.5-2.5 4-4 4-6.5Z"/><path d="M9.5 12.5c0-2.5 1.4-5 4-6.5"/></svg>
+                            <span>Reflect</span>
+                        </div>
+                        <svg id="reflect-arrow" class="w-5 h-5 transition-transform" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    </button>
+                    <div id="reflect-submenu" class="pl-6 pt-2 space-y-2 hidden">
+                        <a href="#" class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-600 transition-colors nav-action" data-action="play_game">⚡ Focus Challenge</a>
+                    </div>
+                </div>
+                <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700 transition-colors nav-action" data-action="breathe">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17a5 5 0 0 1-5-5 5 5 0 0 1 5-5h1a4 4 0 0 1 4 4v0a5 5 0 0 1-5 5Z"/><path d="M7 17a5 5 0 0 0 5 5 5 5 0 0 0 5-5v-1a4 4 0 0 0-4-4Z"/></svg>
+                    <span>Breathe</span>
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <div id="main-content" class="container mx-auto max-w-2xl h-screen">
+        <!-- Main Chat Interface -->
+        <div id="chat-view" class="h-full flex flex-col p-4">
+             <header class="flex items-center p-4 bg-slate-800/70 backdrop-blur-sm rounded-xl mb-4 border border-slate-700">
+                <button id="menu-toggle" class="mr-2 p-2 rounded-md hover:bg-slate-700">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <div class="flex-1 text-center">
+                    <h1 class="text-2xl font-bold text-fuchsia-400">Mind Ease</h1>
+                </div>
+                <div class="flex items-center gap-4 text-sm font-semibold">
+                    <div class="flex items-center gap-1">
+                        <span>🔥</span>
+                        <span id="streak-counter">0</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span>✨</span>
+                        <span id="xp-counter">0</span>
+                    </div>
+                </div>
+            </header>
+
+            <main id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Bot initial message is now triggered by JS -->
+            </main>
+
+            <footer class="p-4">
+                <form id="chat-form" class="flex items-center gap-3">
+                    <input type="text" id="chat-input" placeholder="Let's get started..." class="flex-1 w-full p-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500 text-slate-200">
+                    <button type="submit" class="bg-fuchsia-600 text-white p-3 rounded-lg hover:bg-fuchsia-500 transition-colors shadow-lg shadow-fuchsia-600/30">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </form>
+            </footer>
+        </div>
+        
+        <!-- Insights View -->
+        <div id="insights-view" class="h-full flex-col p-4 hidden">
+             <header class="flex items-center p-4 bg-slate-800/70 backdrop-blur-sm rounded-xl mb-4 border border-slate-700">
+                <button id="menu-toggle-insights" class="mr-4 p-2 rounded-md hover:bg-slate-700">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <h1 class="text-2xl font-bold text-fuchsia-400 text-center flex-1">My Insights</h1>
+            </header>
+            
+            <main id="insights-content" class="flex-1 overflow-y-auto p-1 space-y-4">
+                <!-- Insight cards will be injected here -->
+            </main>
+        </div>
+
+        <!-- Community View -->
+        <div id="community-view" class="h-full flex-col p-4 hidden">
+             <header class="flex items-center p-4 bg-slate-800/70 backdrop-blur-sm rounded-xl mb-4 border border-slate-700">
+                <button id="menu-toggle-community" class="mr-4 p-2 rounded-md hover:bg-slate-700">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <h1 class="text-2xl font-bold text-fuchsia-400 text-center flex-1">Community Feed</h1>
+            </header>
+            
+            <form id="snap-form" class="mb-4">
+                <div class="flex gap-2">
+                    <input type="text" id="snap-input" placeholder="Share a vibe or an emoji..." maxlength="100" class="flex-1 p-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+                    <button type="submit" class="bg-fuchsia-600 text-white px-5 rounded-lg hover:bg-fuchsia-500 transition-colors">Share</button>
+                </div>
+            </form>
+
+            <main id="community-feed" class="flex-1 overflow-y-auto p-1 space-y-4">
+                <!-- Snaps will be injected here -->
+            </main>
+        </div>
+        
+        <!-- Garden View -->
+        <div id="garden-view" class="h-full flex-col p-4 hidden">
+             <header class="flex items-center p-4 bg-slate-800/70 backdrop-blur-sm rounded-xl mb-4 border border-slate-700">
+                <button id="menu-toggle-garden" class="mr-4 p-2 rounded-md hover:bg-slate-700">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <h1 class="text-2xl font-bold text-fuchsia-400 text-center flex-1">My Virtual Garden</h1>
+            </header>
+            
+            <main id="garden-display" class="flex-1 flex flex-col items-center justify-center text-center bg-slate-800/50 rounded-lg p-8">
+                <div id="plant-visual" class="text-8xl mb-4"></div>
+                <h2 id="plant-stage" class="text-2xl font-bold text-fuchsia-300"></h2>
+                <p id="plant-desc" class="text-slate-400 mt-2 max-w-md"></p>
+            </main>
+        </div>
+
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- DOM Elements ---
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatMessages = document.getElementById('chat-messages');
+        const sidePanel = document.getElementById('side-panel');
+        const menuToggle = document.getElementById('menu-toggle');
+        const menuToggleCommunity = document.getElementById('menu-toggle-community');
+        const menuToggleGarden = document.getElementById('menu-toggle-garden');
+        const menuToggleInsights = document.getElementById('menu-toggle-insights');
+        const chatView = document.getElementById('chat-view');
+        const communityView = document.getElementById('community-view');
+        const gardenView = document.getElementById('garden-view');
+        const insightsView = document.getElementById('insights-view');
+        const insightsContent = document.getElementById('insights-content');
+        const snapForm = document.getElementById('snap-form');
+        const snapInput = document.getElementById('snap-input');
+        const communityFeed = document.getElementById('community-feed');
+        const reflectToggle = document.getElementById('reflect-toggle');
+        const reflectSubmenu = document.getElementById('reflect-submenu');
+        const reflectArrow = document.getElementById('reflect-arrow');
+        const streakCounter = document.getElementById('streak-counter');
+        const xpCounter = document.getElementById('xp-counter');
+        const plantVisual = document.getElementById('plant-visual');
+        const plantStage = document.getElementById('plant-stage');
+        const plantDesc = document.getElementById('plant-desc');
+
+        // --- Game State & User Data ---
+        let streak = 0;
+        let xp = 0;
+        let lastCheckInDate = null;
+        // In a real app, this would be loaded from persistent storage.
+        // We pre-populate it here to demonstrate the pattern finder.
+        let moodHistory = [
+            { mood: 'anxious', date: new Date(new Date().setDate(new Date().getDate() - 21)) },
+            { mood: 'anxious', date: new Date(new Date().setDate(new Date().getDate() - 14)) },
+            { mood: 'anxious', date: new Date(new Date().setDate(new Date().getDate() - 7)) },
+            { mood: 'happy', date: new Date(new Date().setDate(new Date().getDate() - 11)) },
+            { mood: 'calm', date: new Date(new Date().setDate(new Date().getDate() - 4)) },
+        ];
+
+
+        // --- Gemini API Integration ---
+        const API_KEY = ""; // Kept empty as per instructions
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+
+        async function callGemini(prompt, retries = 3, delay = 1000) {
+            try {
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                };
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    if (response.status === 429 && retries > 0) { // Too Many Requests
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return callGemini(prompt, retries - 1, delay * 2); // Exponential backoff
+                    }
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    return candidate.content.parts[0].text.trim();
+                } else {
+                    return "I'm having trouble thinking of something right now. Let's try a different activity.";
+                }
+            } catch (error) {
+                console.error("Gemini API call failed:", error);
+                if (retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return callGemini(prompt, retries - 1, delay * 2);
+                }
+                return "My connection seems a bit weak. Let's focus on one of our core challenges for now.";
+            }
+        }
+
+
+        // --- Side Panel & View Switching ---
+        function togglePanel() {
+            sidePanel.classList.toggle('-translate-x-full');
+        }
+        [menuToggle, menuToggleCommunity, menuToggleGarden, menuToggleInsights].forEach(btn => btn.addEventListener('click', togglePanel));
+        
+        reflectToggle.addEventListener('click', () => {
+            reflectSubmenu.classList.toggle('hidden');
+            reflectArrow.classList.toggle('rotate-180');
+        });
+        
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const view = link.dataset.view;
+                chatView.style.display = 'none';
+                communityView.style.display = 'none';
+                gardenView.style.display = 'none';
+                insightsView.style.display = 'none';
+                
+                document.getElementById(`${view}-view`).style.display = 'flex';
+                
+                if (view === 'insights') {
+                    renderInsights();
+                }
+                
+                togglePanel();
+            });
+        });
+
+        document.querySelectorAll('.nav-action').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                chatView.style.display = 'flex';
+                communityView.style.display = 'none';
+                gardenView.style.display = 'none';
+                insightsView.style.display = 'none';
+
+                const action = link.dataset.action;
+                const text = link.textContent.trim();
+                appendUserMessage(`Selected: ${text}`);
+                handleAction(action, text);
+                togglePanel();
+            });
+        });
+
+        // --- Core Chat Functions ---
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const userInput = chatInput.value.trim();
+            if (userInput === '') return;
+            appendUserMessage(userInput);
+            chatInput.value = '';
+            getBotResponse(userInput);
+        });
+
+        function appendUserMessage(message) {
+            const messageHtml = `<div class="flex items-start gap-3 justify-end"><div><div class="bg-slate-200 text-slate-800 p-3 rounded-l-lg rounded-br-lg max-w-xs sm:max-w-sm md:max-w-md"><p>${message}</p></div></div></div>`;
+            chatMessages.innerHTML += messageHtml;
+            scrollToBottom();
+        }
+        
+        function appendBotMessage(message, hasOptions = false) {
+             const messageHtml = `<div class="flex items-start gap-3"><div class="bg-fuchsia-600 text-white p-2 rounded-full flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v1.2a1 1 0 0 0 1 1h.3a1 1 0 0 0 1-1.2V4a3 3 0 0 1 3-3h0"/><path d="M18.5 2.5a2.5 2.5 0 0 1 0 5h-10a2.5 2.5 0 0 1 0-5h10Z"/><path d="M9.5 14.5A2.5 2.5 0 0 0 12 12v-1.2a1 1 0 0 1 1-1h.3a1 1 0 0 1 1 1.2V12a3 3 0 0 0 3 3h0"/><path d="M18.5 21.5a2.5 2.5 0 0 0 0-5h-10a2.5 2.5 0 0 0 0 5h10Z"/><path d="M4.5 12a2.5 2.5 0 0 0 0 5h.3a1 1 0 0 0 1-1.2V14a1 1 0 0 0-1-1h-.3Z"/><path d="M4.5 5a2.5 2.5 0 0 1 0 5h.3a1 1 0 0 1 1-1.2V7a1 1 0 0 1-1-1h-.3Z"/></svg></div><div class="max-w-xs sm:max-w-sm md:max-w-md"><div class="bg-slate-700 p-3 rounded-r-lg rounded-bl-lg ${hasOptions ? 'rounded-b-none' : ''}"><p>${message}</p></div></div></div>`;
+            chatMessages.insertAdjacentHTML('beforeend', messageHtml);
+            scrollToBottom();
+        }
+
+        function appendBotOptions(options) {
+            let buttonsHtml = '';
+            options.forEach(opt => {
+                buttonsHtml += `<button class="chat-option-btn w-full text-left p-3 text-fuchsia-300 font-semibold hover:bg-slate-600/50" data-action="${opt.action}" data-value="${opt.value || ''}">${opt.text}</button>`;
+            });
+            const optionsHtml = `<div class="flex items-start gap-3"><div class="w-10 flex-shrink-0"></div><div class="max-w-xs sm:max-w-sm md:max-w-md flex-grow"><div class="bg-slate-700 rounded-r-lg rounded-tl-lg rounded-b-lg -mt-2 border-t border-slate-600/50 divide-y divide-slate-600/50">${buttonsHtml}</div></div></div>`;
+            chatMessages.innerHTML += optionsHtml;
+            scrollToBottom();
+        }
+
+        chatMessages.addEventListener('click', function(e) {
+            const button = e.target.closest('.chat-option-btn');
+            if (button) {
+                const action = button.dataset.action;
+                const text = button.textContent;
+                const value = button.dataset.value;
+                
+                const parent = button.closest('.divide-y');
+                if(parent) {
+                    parent.querySelectorAll('.chat-option-btn').forEach(btn => {
+                        btn.disabled = true;
+                        btn.classList.remove('hover:bg-slate-600/50');
+                        btn.style.cursor = 'default';
+                        if(btn !== button) {
+                           btn.style.opacity = '0.5';
+                        }
+                    });
+                }
+                if (action.startsWith('log_mood')) {
+                    handleMoodLog(action, text);
+                } else {
+                    handleAction(action, text);
+                }
+            }
+        });
+
+        function showTypingIndicator() {
+            const typingHtml = `<div id="typing-indicator" class="flex items-start gap-3"><div class="bg-fuchsia-600 text-white p-2 rounded-full flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v1.2a1 1 0 0 0 1 1h.3a1 1 0 0 0 1-1.2V4a3 3 0 0 1 3-3h0"/><path d="M18.5 2.5a2.5 2.5 0 0 1 0 5h-10a2.5 2.5 0 0 1 0-5h10Z"/><path d="M9.5 14.5A2.5 2.5 0 0 0 12 12v-1.2a1 1 0 0 1 1-1h.3a1 1 0 0 1 1 1.2V12a3 3 0 0 0 3 3h0"/><path d="M18.5 21.5a2.5 2.5 0 0 0 0-5h-10a2.5 2.5 0 0 0 0 5h10Z"/><path d="M4.5 12a2.5 2.5 0 0 0 0 5h.3a1 1 0 0 0 1-1.2V14a1 1 0 0 0-1-1h-.3Z"/><path d="M4.5 5a2.5 2.5 0 0 1 0 5h.3a1 1 0 0 1 1-1.2V7a1 1 0 0 1-1-1h-.3Z"/></svg></div><div><div class="bg-slate-700 p-3 rounded-r-lg rounded-bl-lg flex items-center space-x-1 h-10"><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div></div></div></div>`;
+            chatMessages.innerHTML += typingHtml;
+            scrollToBottom();
+        }
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        }
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // --- Bot Logic ---
+        function getBotResponse(userInput) {
+            showTypingIndicator();
+            setTimeout(() => {
+                removeTypingIndicator();
+                 const lowerInput = userInput.toLowerCase();
+                 if (lowerInput.includes('hello') || lowerInput.includes('hi')) {
+                    appendBotMessage("Hey! So glad you're here. Ready to conquer the day together?");
+                    setTimeout(showMainMenu, 1000);
+                } else if (lowerInput.includes('low') && lowerInput.includes('tomorrow is monday')) {
+                    appendBotMessage("I've noticed you've also felt anxious on the last few Mondays. Just something to be aware of.");
+                    setTimeout(showMainMenu, 1200);
+                } else if (lowerInput.includes('sad') || lowerInput.includes('down') || lowerInput.includes('anxious')) {
+                    appendBotMessage("Whoa, sounds like things are heavy right now. I'm here with you. Seriously. Sometimes the best way to shift the vibe is to get our minds moving. You game for a quick mission?");
+                    setTimeout(showMainMenu, 1200);
+                }
+                else {
+                    appendBotMessage("Okay, that's a really interesting thought. Let's dive into that... but first, how about we warm up your focus circuits?");
+                    setTimeout(() => {
+                        appendBotMessage("I've got the perfect challenge for us: Mindful Match. Let's do this!", true);
+                        appendBotOptions([{text: "I'm in! Let's play!", action: 'play_game'}]);
+                    }, 1200);
+                }
+            }, 1500 + Math.random() * 800);
+        }
+
+        function handleAction(action, text) {
+            appendUserMessage(`Let's do this: ${text}`); 
+            showTypingIndicator();
+            setTimeout(() => {
+                removeTypingIndicator();
+                switch (action) {
+                    case 'play_game':
+                        appendBotMessage("YES! Let's go. The goal is to match the pairs, but the real win is sharpening that amazing mind of yours. You got this. Let's play!");
+                        setTimeout(appendMemoryGame, 1000);
+                        break;
+                    case 'breathe':
+                        appendBotMessage("Alright, Zen Mode activated. This is powerful stuff. Let's sync up our energy. Follow the pulse... breathe in with it... and out. You're in total control of your calm.");
+                        appendBreathingExercise();
+                        break;
+                    case 'analyze_patterns':
+                        appendBotMessage("Heck yeah, let's look at the data! I'm running a scan of your recent check-ins to see what patterns we can find together.");
+                        const patterns = analyzeMoodHistory();
+                        setTimeout(() => {
+                           if (patterns.length === 0) {
+                                appendBotMessage("Okay, scan complete! Right now, there are no strong recurring patterns. Keep checking in daily, and we'll have more data to work with. You're building an awesome foundation!");
+                           } else {
+                                appendBotMessage("Done! I found a potential pattern for us to look at:");
+                                patterns.forEach(pattern => {
+                                    setTimeout(() => appendBotMessage(`💡 ${pattern}`), 800);
+                                });
+                           }
+                           setTimeout(showMainMenu, patterns.length > 0 ? 2000 : 1500);
+                        }, 2000);
+                        break;
+                }
+            }, 1200);
+        }
+        
+        function showMainMenu() {
+            appendBotMessage("Alright, what's our next move? Pick a challenge, and we'll crush it together.", true);
+            appendBotOptions([
+                { text: '⚡ Focus Challenge', action: 'play_game' },
+                { text: '🧘 Zen Mode', action: 'breathe' },
+                { text: '🧠 Analyze My Patterns', action: 'analyze_patterns' },
+            ]);
+        }
+        
+        // --- Gamification & Mood Logging ---
+        function updateStatsUI() {
+            streakCounter.textContent = streak;
+            xpCounter.textContent = xp;
+        }
+
+        // --- PATTERN FINDER LOGIC ---
+        function analyzeMoodHistory() {
+            const dayNames = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];
+            const moodCountsByDay = {}; // e.g. {1: {anxious: 3, sad: 1}} for Monday
+            const insights = [];
+
+            moodHistory.forEach(log => {
+                const dayIndex = new Date(log.date).getDay();
+                if (!moodCountsByDay[dayIndex]) {
+                    moodCountsByDay[dayIndex] = {};
+                }
+                if (!moodCountsByDay[dayIndex][log.mood]) {
+                    moodCountsByDay[dayIndex][log.mood] = 0;
+                }
+                moodCountsByDay[dayIndex][log.mood]++;
+            });
+
+            for (const dayIndex in moodCountsByDay) {
+                for (const mood in moodCountsByDay[dayIndex]) {
+                    if (moodCountsByDay[dayIndex][mood] >= 3) {
+                        const dayName = dayNames[dayIndex];
+                        insights.push(`We've noticed a pattern of feeling <strong>${mood}</strong> on <strong>${dayName}</strong>.`);
+                    }
+                }
+            }
+            return insights;
+        }
+
+        function renderInsights() {
+            insightsContent.innerHTML = '';
+            const patterns = analyzeMoodHistory();
+
+            if (patterns.length === 0) {
+                insightsContent.innerHTML = `
+                    <div class="text-center p-8 bg-slate-800/50 rounded-lg">
+                        <div class="text-5xl mb-4">📈</div>
+                        <h3 class="text-xl font-bold text-fuchsia-300">No Strong Patterns Yet!</h3>
+                        <p class="text-slate-400 mt-2">Keep checking in daily. The more data we have, the better we can spot your unique triggers and trends together.</p>
+                    </div>
+                `;
+            } else {
+                patterns.forEach(pattern => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-slate-800 p-4 rounded-lg border border-slate-700 flex items-center gap-4';
+                    card.innerHTML = `
+                        <div class="text-3xl">💡</div>
+                        <p class="text-slate-300 flex-1">${pattern}</p>
+                    `;
+                    insightsContent.appendChild(card);
+                });
+            }
+        }
+
+
+        async function handleMoodLog(action, text) {
+            const today = new Date().toDateString();
+            if (lastCheckInDate !== today) {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                if (lastCheckInDate === yesterday.toDateString()) {
+                    streak++;
+                } else {
+                    streak = 1; 
+                }
+                xp += 10;
+                lastCheckInDate = today;
+                updateStatsUI();
+                updateGarden();
+            }
+
+            let mood = action.split('_').pop();
+            const newLog = { mood: mood, date: new Date() };
+            moodHistory.push(newLog);
+
+            let response = "Thanks for checking in. Every bit of self-awareness is a huge win. ";
+            if (mood === 'happy') response += "Awesome to hear you're feeling great! Let's keep that momentum going!";
+            if (mood === 'calm') response += "That's a great state of mind. Let's build on that peace.";
+            if (mood === 'sad') response += "It's okay to feel down. Recognizing it is the first step. I'm here for you.";
+            if (mood === 'anxious') response += "That buzzing energy can be tough. Let's channel it into something productive.";
+            
+            appendUserMessage(text);
+            showTypingIndicator();
+            await new Promise(r => setTimeout(r, 1200));
+            removeTypingIndicator();
+            appendBotMessage(response + ` You've earned 10 XP! Your streak is now ${streak}!`);
+            
+            if (mood === 'sad' || mood === 'anxious') {
+                showTypingIndicator();
+                const prompt = `You are an empathetic AI companion in a mental wellness app. A user is feeling ${mood}. Provide one, creative, and actionable coping strategy in a single, short sentence. Frame it as a friendly suggestion. Do not start with "Sure" or "Here is".`;
+                const geminiSuggestion = await callGemini(prompt);
+                removeTypingIndicator();
+                appendBotMessage(`✨ I had a thought: ${geminiSuggestion}`);
+            }
+
+            setTimeout(showMainMenu, 2000);
+        }
+
+
+        const gardenLevels = [
+            { name: "The Seed of Potential", visual: "🌱", desc: "Every great journey starts with a single step. You've planted the seed of mindfulness.", minStreak: 0 },
+            { name: "Sprouting Up", visual: "🌿", desc: "Consistency is key! Your small efforts are starting to show as new growth appears.", minStreak: 3 },
+            { name: "Flourishing", visual: "🌳", desc: "Look at you go! You've built strong roots and are now a symbol of steady growth and resilience.", minStreak: 7 },
+            { name: "Zen Oasis", visual: "🏞️", desc: "You have cultivated a true sanctuary of peace and strength. Your dedication is an inspiration.", minStreak: 14 }
+        ];
+
+        function updateGarden() {
+            const currentLevel = gardenLevels.slice().reverse().find(level => streak >= level.minStreak) || gardenLevels[0];
+            plantVisual.textContent = currentLevel.visual;
+            plantStage.textContent = currentLevel.name;
+            plantDesc.textContent = currentLevel.desc;
+        }
+
+        // --- In-Chat Tools ---
+        function appendBreathingExercise() {
+            const exerciseHtml = `<div class="flex items-start gap-3"><div class="w-10 flex-shrink-0"></div><div class="max-w-xs sm:max-w-sm md:max-w-md w-full"><div class="bg-slate-700 p-4 rounded-lg flex justify-center items-center"><div class="relative w-40 h-40"><div class="absolute inset-0 bg-fuchsia-900/50 rounded-full"></div><div class="absolute inset-0 bg-fuchsia-700/60 rounded-full breathing-circle"></div><div class="absolute inset-0 flex items-center justify-center"><p class="text-lg font-semibold text-fuchsia-200">Sync</p></div></div></div></div></div>`;
+            chatMessages.innerHTML += exerciseHtml;
+            scrollToBottom();
+        }
+
+        function appendMemoryGame() {
+            const icons = ['🌙', '⭐', '🍃', '💧', '☀️', '❤️'];
+            let gameDeck = [...icons, ...icons];
+            for (let i = gameDeck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [gameDeck[i], gameDeck[j]] = [gameDeck[j], gameDeck[i]];
+            }
+            let cardsHtml = '';
+            gameDeck.forEach(icon => {
+                cardsHtml += `<div class="memory-card w-16 h-16 sm:w-20 sm:h-20" data-icon="${icon}"><div class="memory-card-inner"><div class="memory-card-front"></div><div class="memory-card-back"><span class="text-3xl">${icon}</span></div></div></div>`;
+            });
+            const gameHtml = `<div class="flex items-start gap-3"><div class="w-10 flex-shrink-0"></div><div class="max-w-xs sm:max-w-sm md:max-w-md w-full"><div id="memory-game-board" class="bg-slate-900/50 p-3 rounded-lg grid grid-cols-4 gap-2 sm:gap-3">${cardsHtml}</div></div></div>`;
+            chatMessages.innerHTML += gameHtml;
+            initMemoryGame();
+            scrollToBottom();
+        }
+
+        function initMemoryGame() {
+            const board = document.getElementById('memory-game-board');
+            if(!board) return;
+            let flippedCards = [], matchedPairs = 0, canFlip = true;
+            const totalPairs = board.children.length / 2;
+            board.addEventListener('click', e => {
+                const card = e.target.closest('.memory-card');
+                if (!card || !canFlip || card.classList.contains('is-flipped')) return;
+                card.classList.add('is-flipped');
+                flippedCards.push(card);
+                if (flippedCards.length === 2) {
+                    canFlip = false;
+                    const [card1, card2] = flippedCards;
+                    if (card1.dataset.icon === card2.dataset.icon) {
+                        xp += 5; 
+                        updateStatsUI();
+                        matchedPairs++;
+                        flippedCards = [];
+                        canFlip = true;
+                        if (matchedPairs === totalPairs) setTimeout(endGame, 800);
+                    } else {
+                        setTimeout(() => {
+                            card1.classList.remove('is-flipped');
+                            card2.classList.remove('is-flipped');
+                            flippedCards = [];
+                            canFlip = true;
+                        }, 1200);
+                    }
+                }
+            });
+        }
+        
+        function endGame() {
+            appendBotMessage("BOOM! Mission complete! You cleared the whole board and earned 30 XP! That's what I'm talking about.");
+            setTimeout(() => {
+                appendBotMessage("<strong>Let's break that down:</strong> You just proved you can create order out of chaos. That's your superpower. Don't just see the jumble; see the pairs waiting to be found. Remember this feeling next time things get complicated. You're a natural at this.");
+                 setTimeout(showMainMenu, 2000);
+            }, 1500);
+        }
+
+        // --- Community Feature ---
+        const mockSnaps = [
+            { tag: 'QuantumThinker', type: 'emoji', content: '😮‍💨' },
+            { tag: 'PixelPioneer', type: 'text', content: 'Feeling a bit foggy today but pushing through.' },
+            { tag: 'EchoRider', type: 'emoji', content: '🎉' },
+            { tag: 'FutureScout', type: 'text', content: 'Finally finished a project that was stressing me out!' },
+            { tag: 'GhostSurfer', type: 'emoji', content: '🫠' },
+        ];
+
+        const tagAdjectives = ['Cosmic', 'Digital', 'Echo', 'Future', 'Ghost', 'Neon', 'Quantum', 'Pixel', 'Solar', 'Void'];
+        const tagNouns = ['Joker', 'Pilot', 'Sprite', 'Voyager', 'Weaver', 'Scout', 'Rider', 'Pioneer', 'Surfer', 'Glitch'];
+
+        function generateTag() {
+            const adj = tagAdjectives[Math.floor(Math.random() * tagAdjectives.length)];
+            const noun = tagNouns[Math.floor(Math.random() * tagNouns.length)];
+            return `${adj}${noun}`;
+        }
+
+        function renderSnaps() {
+            communityFeed.innerHTML = '';
+            mockSnaps.forEach(snap => createSnapElement(snap, false));
+        }
+
+        function createSnapElement(snap, isNew = false) {
+            const snapEl = document.createElement('div');
+            snapEl.className = 'snap-container bg-slate-800 p-4 rounded-lg border border-slate-700';
+            
+            let contentHtml = '';
+            if (snap.type === 'emoji') {
+                contentHtml = `<p class="text-5xl text-center py-2">${snap.content}</p>`;
+            } else {
+                contentHtml = `<p class="snap-text text-slate-300">${snap.content}</p>
+                <div class="text-right mt-2">
+                    <button class="reflect-btn text-xs font-semibold text-fuchsia-400 hover:text-fuchsia-300">✨ Reflect</button>
+                </div>
+                <div class="reflection-content text-xs text-fuchsia-200/80 italic mt-2 p-2 bg-slate-700/50 rounded-md" style="display: none;"></div>
+                `;
+            }
+
+            snapEl.innerHTML = `
+                <div class="flex items-center mb-2">
+                    <span class="text-sm font-bold text-fuchsia-400">@${snap.tag}</span>
+                </div>
+                ${contentHtml}
+            `;
+
+            if (isNew) {
+                communityFeed.prepend(snapEl);
+            } else {
+                communityFeed.appendChild(snapEl);
+            }
+        }
+        
+        communityFeed.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('reflect-btn')) {
+                const button = e.target;
+                const container = button.closest('.snap-container');
+                const textContent = container.querySelector('.snap-text').textContent;
+                const reflectionBox = container.querySelector('.reflection-content');
+
+                button.textContent = 'Thinking...';
+                button.disabled = true;
+
+                const prompt = `You are an AI assistant in a mental wellness app. Your task is to analyze the emotional tone of a short, anonymous user post. Summarize the underlying feeling in a gentle, supportive, and reflective sentence. Do not give advice. The user's post is: "${textContent}"`;
+                const reflection = await callGemini(prompt);
+                
+                reflectionBox.textContent = reflection;
+                reflectionBox.style.display = 'block';
+                button.style.display = 'none'; // Hide button after use
+            }
+        });
+
+
+        snapForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const content = snapInput.value.trim();
+            if (!content) return;
+            
+            const emojiRegex = /^\p{Emoji}$/u;
+            const snapType = emojiRegex.test(content) ? 'emoji' : 'text';
+
+            const newSnap = { 
+                tag: generateTag(),
+                type: snapType, 
+                content: content 
+            };
+            mockSnaps.unshift(newSnap); 
+            createSnapElement(newSnap, true); 
+            
+            snapInput.value = '';
+        });
+
+        // --- Initial Load ---
+        function startConversation() {
+            const today = new Date().toDateString();
+            showTypingIndicator();
+            setTimeout(() => {
+                removeTypingIndicator();
+                if (lastCheckInDate === today) {
+                    appendBotMessage("Welcome back! You've already checked in today, awesome job. Ready to train?");
+                    setTimeout(showMainMenu, 1200);
+                } else {
+                    appendBotMessage("Hey! Let's start with a quick check-in. How are you feeling right now?", true);
+                    appendBotOptions([
+                        { text: '😄 Great', action: 'log_mood_happy' },
+                        { text: '😌 Calm', action: 'log_mood_calm' },
+                        { text: '😔 Sad', action: 'log_mood_sad' },
+                        { text: '😟 Anxious', action: 'log_mood_anxious' }
+                    ]);
+                }
+            }, 1500);
+        }
+
+        updateStatsUI();
+        updateGarden();
+        startConversation();
+        renderSnaps(); 
+    });
+    </script>
+</body>
+</html>
+
